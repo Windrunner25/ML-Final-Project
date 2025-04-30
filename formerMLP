@@ -1,0 +1,131 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+
+
+# Load data
+
+X_train_path = "/Users/PaigeZurcher/Desktop/dataset/X_train.csv"
+y_train_path = "/Users/PaigeZurcher/Desktop/dataset/y_train.csv"
+X_test_path = "/Users/PaigeZurcher/Desktop/dataset/X_test.csv"
+
+X_train = pd.read_csv(X_train_path)
+y_train = pd.read_csv(y_train_path).values.ravel()
+X_test = pd.read_csv(X_test_path)
+X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
+
+X_train = X_train.values
+X_test = X_test.values
+
+# Setup
+
+scalers = {
+    "No Preprocessing": None,
+    "StandardScaler": StandardScaler(),
+    "MinMaxScaler": MinMaxScaler()
+}
+
+hidden_layer_sizes = [(50,), (100,), (100, 50)]
+alphas = [0.0001, 0.001, 0.01]
+learning_rates = [0.001, 0.01]
+
+skf = StratifiedKFold(n_splits=4, shuffle=True, random_state=42)
+
+best_score = 0
+best_model = None
+best_scaler = None
+results = []
+
+
+# Cross-validation loop
+
+print("\nRunning Cross-Validation...\n")
+
+for scaler_name, scaler in scalers.items():
+    print(f"\nScaler: {scaler_name}")
+    
+    for hls in hidden_layer_sizes:
+        for alpha in alphas:
+            for lr in learning_rates:
+                val_scores = []
+                train_scores = []
+
+                for train_index, val_index in skf.split(X_train, y_train):
+                    X_tr, X_val = X_train[train_index], X_train[val_index]
+                    y_tr, y_val = y_train[train_index], y_train[val_index]
+
+                    if scaler:
+                        scaler_fit = scaler.fit(X_tr)
+                        X_tr = scaler_fit.transform(X_tr)
+                        X_val = scaler_fit.transform(X_val)
+
+                    clf = MLPClassifier(hidden_layer_sizes=hls, alpha=alpha,
+                                        learning_rate_init=lr, max_iter=1000,
+                                        early_stopping=True, random_state=42)
+                    clf.fit(X_tr, y_tr)
+                    train_acc = clf.score(X_tr, y_tr)
+                    val_acc = clf.score(X_val, y_val)
+
+                    train_scores.append(train_acc)
+                    val_scores.append(val_acc)
+
+                mean_val = np.mean(val_scores)
+                mean_train = np.mean(train_scores)
+                results.append({
+                    'Scaler': scaler_name,
+                    'Layers': hls,
+                    'Alpha': alpha,
+                    'Learning Rate': lr,
+                    'Train Accuracy': mean_train,
+                    'Validation Accuracy': mean_val
+                })
+
+                print(f"Layers: {hls}, Alpha: {alpha}, LR: {lr} --> Train Acc: {mean_train:.4f}, Val Acc: {mean_val:.4f}")
+
+                if mean_val > best_score:
+                    best_score = mean_val
+                    best_model = clf
+                    best_scaler = scaler.fit(X_train) if scaler else None
+                    best_params = (scaler_name, hls, alpha, lr)
+
+# Plot results
+
+
+results_df = pd.DataFrame(results)
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=results_df, x="Alpha", y="Validation Accuracy", hue="Scaler", style="Learning Rate", markers=True)
+plt.title("Validation Accuracy vs. Alpha for Different Scalers and Learning Rates")
+plt.grid(True)
+plt.show()
+
+
+# Final model training
+
+
+print("\nBest Parameters:")
+print(f"Scaler: {best_params[0]}, Layers: {best_params[1]}, Alpha: {best_params[2]}, LR: {best_params[3]}")
+print(f"Best Validation Accuracy: {best_score:.4f}")
+
+if best_scaler:
+    X_train_scaled = best_scaler.transform(X_train)
+    X_test_scaled = best_scaler.transform(X_test)
+else:
+    X_train_scaled = X_train
+    X_test_scaled = X_test
+
+final_model = MLPClassifier(hidden_layer_sizes=best_params[1],
+                            alpha=best_params[2],
+                            learning_rate_init=best_params[3],
+                            max_iter=1000, early_stopping=True, random_state=42)
+final_model.fit(X_train_scaled, y_train)
+
+
+
+train_acc = final_model.score(X_train_scaled, y_train)
+print(f"Final Train Accuracy: {train_acc:.4f}")
