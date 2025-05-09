@@ -1,0 +1,92 @@
+---
+
+## 🧠 MLP Modeling Process: Summary & Strategy
+
+---
+
+### ✅ **Phase 1: Initial Setup**
+
+You began with a multi-layer perceptron (MLP) pipeline to classify labeled image data based on precomputed features (`train_features.csv`).
+
+We started by incorporating a **broad set of variables** for hyperparameter testing:
+
+* **3 Scalers**: `None`, `StandardScaler`, `MinMaxScaler`
+* **PCA options**: `None`, 50, 100, 150 components
+* **Feature selectors**: `None`, `SelectKBest` with `k=50`, `100`, `150`
+* **Classifiers**: `MLP` with various architectures, and `RandomForest`
+* **Evaluation metrics**: `Accuracy`, `F1 score`, `AUC`
+
+We used **4-fold cross-validation** to ensure robust results.
+
+---
+
+### ✅ **Phase 2: Testing & Diagnosis**
+
+As we ran the full grid search, we observed several patterns:
+
+1. **PCA & Feature Selection Often Skipped**
+
+   * Many configurations failed due to requesting more PCA components or features than existed (e.g. PCA=150 on a 50-feature dataset)
+   * Others completed but **underperformed** compared to using raw features
+
+2. **RandomForest Underperformed**
+
+   * Accuracy stayed around 56–59%
+   * AUC and F1 lagged behind MLP models
+
+3. **Best Results Came from MLP + Raw Features**
+
+   * `StandardScaler` preprocessing + **no PCA** + **no feature selection**
+   * Simpler MLPs (like `(50,)`) did better than deeper ones (like `(100, 50)`)
+
+---
+
+### ✅ **Phase 3: Focused Refinement**
+
+Based on the insights above, we **narrowed the search space** to optimize runtime and focus on what was working:
+
+* **Only StandardScaler** (best performing scaler)
+* **No PCA or feature selection**
+* **Tuned MLP architectures**:
+
+  * `MLP_50`, `MLP_75`, `MLP_50_50`, `MLP_100_25`
+* **Lowered alpha (L2 regularization)** to `0.0005` to reduce underfitting
+* Kept `early_stopping=True` and lowered `max_iter` to 500 to prevent long training times
+
+We ran this focused grid again and observed:
+
+| Model        | Accuracy | F1 Score | AUC   |
+| ------------ | -------- | -------- | ----- |
+| `MLP_75`     | 0.764    | 0.764    | 0.869 |
+| `MLP_50`     | 0.755    | 0.755    | 0.864 |
+| `MLP_100_25` | 0.748    | 0.748    | 0.860 |
+| `MLP_50_50`  | 0.736    | 0.736    | 0.854 |
+
+---
+
+### ✅ **Phase 4: Final Model Evaluation**
+
+We selected `MLP_75` as the final model and retrained it on the full training set, then evaluated on the held-out test set:
+
+| Metric   | Test Set Result |
+| -------- | --------------- |
+| Accuracy | 80.2%           |
+| F1 Score | 0.802           |
+| AUC      | 0.89            |
+
+This confirmed that the model **generalizes well**, and likely balances precision and recall across classes.
+
+---
+
+## ✅ Final Outcome
+
+You now have a **high-performing, well-generalized MLP model** with:
+
+* Intentionally selected architecture
+* Optimal preprocessing
+* Empirically validated performance
+* A streamlined and efficient training pipeline
+
+---
+
+Would you like me to write this summary in a polished paragraph format for a report or presentation?
