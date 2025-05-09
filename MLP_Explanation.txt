@@ -89,4 +89,3 @@ You now have a **high-performing, well-generalized MLP model** with:
 
 ---
 
-Would you like me to write this summary in a polished paragraph format for a report or presentation?

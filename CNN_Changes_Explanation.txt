@@ -1,0 +1,99 @@
+---
+
+## ✅ Summary: How We Improved the CNN Pipeline
+
+---
+
+### 🔧 1. **Model Architecture Enhancements**
+
+#### ✨ What We Changed:
+
+* Added a **third convolutional layer**
+* Introduced **Batch Normalization** after each conv layer
+* Retained **Dropout** and `ReLU + MaxPool` after each conv block
+
+#### 🧠 Why:
+
+* **More depth** allows the CNN to learn richer hierarchical features
+* **BatchNorm** stabilizes and speeds up training by normalizing activations
+* This makes the network more expressive and resilient to overfitting
+
+---
+
+### 🔧 2. **Better Data Augmentation**
+
+#### ✨ What We Changed:
+
+```python
+transform = transforms.Compose([
+    transforms.Resize((64, 64)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(10),
+    transforms.ToTensor(),
+    transforms.Normalize([0.5]*3, [0.5]*3)
+])
+```
+
+#### 🧠 Why:
+
+* Introduces **visual variety** to each training epoch
+* Helps CNN generalize by learning features invariant to flips and slight rotations
+* **Essential** when the dataset isn’t massive
+
+---
+
+### 🔧 3. **Extended Epochs for Training**
+
+#### ✨ What We Changed:
+
+```python
+for epoch in range(5):  →  for epoch in range(20)
+```
+
+#### 🧠 Why:
+
+* CNNs typically require **10–50+ epochs** to converge
+* MLPs can get away with fewer epochs since they're fed engineered features
+* You want to give the CNN enough time to optimize its filters
+
+---
+
+### 🔧 4. **Early Exit for Bad Configs**
+
+#### ✨ What We Added:
+
+```python
+if len(fold_scores) == 1 and acc < 0.25:
+    print(...)  # Skip this config early
+    break
+```
+
+#### 🧠 Why:
+
+* Speeds up experimentation by **skipping low-performing parameter combos**
+* Prevents wasting time on configurations clearly underperforming after one fold
+
+---
+
+### 🔧 5. **Model Renaming**
+
+#### ✨ What We Changed:
+
+* Renamed the model from `SimpleCNN` to `ImprovedCNN`
+
+#### 🧠 Why:
+
+* Reflects the significant upgrades in design and makes the code easier to track
+
+---
+
+## 📈 The Goal of All These Changes:
+
+To build a **CNN model that can compete with or beat your strong MLP baseline** by:
+
+* Letting the model learn image features directly (not rely on precomputed ones)
+* Making training more robust and efficient
+* Preventing wasted compute on unpromising experiments
+
+---
+
